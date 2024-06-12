@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Points Map</title>
+    <style>
+        #map {
+            height: 100vh; /* Full viewport height */
+            width: 100vw;  /* Full viewport width */
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #coordinates {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="coordinates">Coordinates will appear here</div>
+    <script>
+        var map;
+        var currentLocationMarker;
+        var fishingMarkers = [];
+        var directionsRenderer;
+        var coordinatesElement = document.getElementById('coordinates');
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 0, lng: 0 },
+                zoom: 8
+            });
+
+            // Load saved markers from local storage
+            loadMarkers();
+
+            // Add event listener to the map to handle click events
+            map.addListener('click', function(event) {
+                addFishingMarker(event.latLng);
+            });
+
+            // Start watching the user's location
+            watchLocation();
+        }
+
+        function watchLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(onSuccess, onError, {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        function onSuccess(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            var myLatlng = new google.maps.LatLng(latitude, longitude);
+            
+            if (!currentLocationMarker) {
+                currentLocationMarker = new google.maps.Marker({
+                    position: myLatlng,
+                    map: map,
+                    icon: {
+                        url: 'https://maps.google.com/mapfiles/ms/micons/blue-dot.png', // Default blue marker icon
+    scaledSize: new google.maps.Size(48, 48),
+                    },
+                    title: 'Latitude: ' + latitude + ', Longitude: ' + longitude
+                });
+            } else {
+                currentLocationMarker.setPosition(myLatlng);
+                currentLocationMarker.setIcon({
+                    url: 'https://maps.google.com/mapfiles/ms/micons/blue-dot.png',
+                    scaledSize: new google.maps.Size(48, 48),
+                });
+                currentLocationMarker.setTitle('Latitude: ' + latitude + ', Longitude: ' + longitude);
+            }
+
+            coordinatesElement.innerText = 'Latitude: ' + latitude + ', Longitude: ' + longitude;
+            map.setCenter(myLatlng);
+        }
+
+        function onError(error) {
+            alert('Error occurred. Error code: ' + error.code);
+        }
+
+        function addFishingMarker(latLng) {
+    var marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        icon: {
+            url: 'https://maps.google.com/mapfiles/ms/micons/blue-dot.png',
+            scaledSize: new google.maps.Size(48, 48)
+        }
+    });
+
+    // Add click event listener to the marker
+    marker.addListener('click', function() {
+        removeFishingMarker(marker);
+    });
+
+    fishingMarkers.push(marker);
+    saveMarkers();
+}
+
+        function removeFishingMarker(marker) {
+            // Remove marker from the map
+            marker.setMap(null);
+
+            // Remove marker from the fishingMarkers array
+            var index = fishingMarkers.indexOf(marker);
+            if (index !== -1) {
+                fishingMarkers.splice(index, 1);
+            }
+
+            // Save the updated markers
+            saveMarkers();
+        }
+
+        function saveMarkers() {
+            var markerPositions = fishingMarkers.map(marker => {
+                return { lat: marker.getPosition().lat(), lng: marker.getPosition().lng() };
+            });
+            localStorage.setItem('fishingMarkers', JSON.stringify(markerPositions));
+        }
+
+        function loadMarkers() {
+            var markerPositions = JSON.parse(localStorage.getItem('fishingMarkers'));
+            if (markerPositions) {
+                markerPositions.forEach(pos => {
+                    var latLng = new google.maps.LatLng(pos.lat, pos.lng);
+                    var marker = new google.maps.Marker({
+                        position: latLng,
+                        map: map,
+                        icon: {
+                       url: 'https://maps.google.com/mapfiles/ms/micons/blue-dot.png', // Default blue marker icon
+                       scaledSize: new google.maps.Size(48, 48),
+
+                        }
+
+                    });
+
+                    // Add click event listener to the marker
+                    marker.addListener('click', function() {
+                        removeFishingMarker(marker);
+                    });
+
+                    fishingMarkers.push(marker);
+                });
+            }
+        }
+
+    </script>
+   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiy9hKA03J5nKVVtwKtNw9Qt_HgDRqkc4&callback=initMap" async defer></script>
+
+</body>
+</html>
